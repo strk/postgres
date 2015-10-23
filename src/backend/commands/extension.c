@@ -64,6 +64,7 @@
 /* Globally visible state variables */
 bool		creating_extension = false;
 Oid			CurrentExtensionObject = InvalidOid;
+char		*Extension_path = NULL; /* set by guc.c */
 
 /*
  * Internal data structure to hold the results of parsing a control file
@@ -348,15 +349,29 @@ is_extension_script_filename(const char *filename)
 	return (extension != NULL) && (strcmp(extension, ".sql") == 0);
 }
 
+static void
+get_extension_path(char *ret_path)
+{
+	char		sharepath[MAXPGPATH];
+	if ( Extension_path )
+	{
+		snprintf(ret_path, MAXPGPATH, "%s", Extension_path);
+	}
+	else
+	{
+		get_share_path(my_exec_path, sharepath);
+		snprintf(ret_path, MAXPGPATH, "%s/extension", sharepath);
+	}
+}
+
 static char *
 get_extension_control_directory(void)
 {
-	char		sharepath[MAXPGPATH];
 	char	   *result;
 
-	get_share_path(my_exec_path, sharepath);
 	result = (char *) palloc(MAXPGPATH);
-	snprintf(result, MAXPGPATH, "%s/extension", sharepath);
+
+	get_extension_path(result);
 
 	return result;
 }
@@ -364,13 +379,13 @@ get_extension_control_directory(void)
 static char *
 get_extension_control_filename(const char *extname)
 {
-	char		sharepath[MAXPGPATH];
-	char	   *result;
+	char		extpath[MAXPGPATH];
+	char	  *result;
 
-	get_share_path(my_exec_path, sharepath);
+	get_extension_path(extpath);
 	result = (char *) palloc(MAXPGPATH);
-	snprintf(result, MAXPGPATH, "%s/extension/%s.control",
-			 sharepath, extname);
+	snprintf(result, MAXPGPATH, "%s/%s.control",
+			 extpath, extname);
 
 	return result;
 }
@@ -378,7 +393,7 @@ get_extension_control_filename(const char *extname)
 static char *
 get_extension_script_directory(ExtensionControlFile *control)
 {
-	char		sharepath[MAXPGPATH];
+	char		extpath[MAXPGPATH];
 	char	   *result;
 
 	/*
@@ -391,9 +406,9 @@ get_extension_script_directory(ExtensionControlFile *control)
 	if (is_absolute_path(control->directory))
 		return pstrdup(control->directory);
 
-	get_share_path(my_exec_path, sharepath);
+	get_extension_path(extpath);
 	result = (char *) palloc(MAXPGPATH);
-	snprintf(result, MAXPGPATH, "%s/%s", sharepath, control->directory);
+	snprintf(result, MAXPGPATH, "%s/%s", extpath, control->directory);
 
 	return result;
 }

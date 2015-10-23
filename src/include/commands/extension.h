@@ -27,6 +27,9 @@
 extern PGDLLIMPORT bool creating_extension;
 extern Oid	CurrentExtensionObject;
 
+/* Path to find extension control files in,
+ * defaults to sharedir/extension */
+extern char *Extension_path;
 
 extern ObjectAddress CreateExtension(CreateExtensionStmt *stmt);
 
